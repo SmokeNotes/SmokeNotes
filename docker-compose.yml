@@ -17,5 +17,5 @@ services:
     user: "1000:1000" # This should match your host user ID (adjust if needed)
 
 # Include smokenotes_mqtt if you want the mqtt client to grab cooks from flameboss
-include:
+#include:
   # - smokenotes_mqtt/docker-compose.yml
