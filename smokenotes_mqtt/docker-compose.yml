@@ -1,5 +1,6 @@
 services:
   smokenotes_mqtt:
+    image: ghcr.io/smokenotes/smokenotes_mqtt:latest
     container_name: smokenotes_mqtt
     restart: unless-stopped
     user: "1000:1000"  # This sets the user:group ID to run the container
@@ -8,8 +9,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_PATH=/app/data/bbq_sessions.db
-      - PUID=1000
-      - PGID=1000
       # For help with these settings see
       #https://support.flameboss.com/support/solutions/articles/14000129040-connect-to-flame-boss-cloud-mqtt-broker
       - MQTT_BROKER=s4.myflameboss.com
@@ -18,6 +17,3 @@ services:
       - MQTT_PASSWORD=
         #if using public cooks change /data to /open
       - MQTT_TOPIC=flameboss/your_flameboss_device_id/send/data
-    # Optional: expose a port for debugging or metrics
-    # ports:
-    #   - "5000:5000"
