@@ -1,6 +1,6 @@
 services:
   smokenotes:
-    container_name: smokenotes
+    container_name: ghcr.io/smokenotes/smokenotes:latest
     ports:
       - "5000:5000"
     volumes:
