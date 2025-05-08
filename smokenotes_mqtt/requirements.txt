@@ -1,0 +1,4 @@
+flask
+flask_sqlalchemy
+paho-mqtt
+pytz

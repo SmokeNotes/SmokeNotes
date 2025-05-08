@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmokeNotes{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <!-- Timezone selector -->
+    <div class="timezone-selector">
+        <form action="{{ url_for('main.set_timezone') }}" method="post">
+            <label for="timezone">Timezone:</label>
+            <select name="timezone" onchange="this.form.submit()">
+                {% for tz in available_timezones %}
+                    <option value="{{ tz }}" {% if user_timezone() == tz %}selected{% endif %}>{{ tz }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+        <h1>SmokeNotes</h1>
+        <nav>
+            <a href="{{ url_for('main.index') }}">Home</a>
+            <a href="{{ url_for('main.new_session') }}">New Session</a>
+        </nav>
+    </header>
+    
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer>
+        <p>SmokeNotes - Self-hosted BBQ wisdom, one session at a time</p>
+    </footer>
+</body>
+</html>

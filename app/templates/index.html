@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %} - Home{% endblock %}
+{% block content %}
+<section class="sessions">
+    <h2>Your Sessions</h2>
+    {% if sessions %}
+    <div class="session-list">
+        {% for session in sessions %}
+        <div class="session-card">
+            <h3>{{ session.title }}</h3>
+            <p><strong>Meat:</strong> {{ session.meat_type }}</p>
+            <p><strong>Started:</strong> {{ format_datetime(session.start_time, '%A, %B %d, %Y at %I:%M %p') }}</p>
+            {% if session.end_time %}
+                <p><strong>Completed:</strong> {{ format_datetime(session.end_time, '%A, %B %d, %Y at %I:%M %p') }}</p>
+                <p><strong>Duration:</strong> {{ session.duration() }}</p>
+                <p class="status-completed"><strong>Status:</strong> Completed</p>
+            {% else %}
+                <p class="status-active"><strong>Status:</strong> Active (Started {{ time_since(session.start_time) }} ago)</p>
+            {% endif %}
+            <a href="{{ url_for('main.view_session', session_id=session.id) }}" class="btn">View Details</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state">No sessions yet. <a href="{{ url_for('main.new_session') }}">Start one now</a>!</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,21 @@
+services:
+  smokenotes:
+    container_name: smokenotes
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - TZ=America/New_York
+      - DATABASE_PATH=/app/data/bbq_sessions.db
+      - PUID=1000
+      - PGID=1000
+      - OPENWEATHER_API_KEY=
+      - DEFAULT_ZIP_CODE=
+    user: "1000:1000" # This should match your host user ID (adjust if needed)
+
+# Include smokenotes_mqtt if you want the mqtt client to grab cooks from flameboss
+include:
+  # - smokenotes_mqtt/docker-compose.yml

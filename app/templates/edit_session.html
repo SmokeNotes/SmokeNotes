@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Session{% endblock %}
+
+{% block content %}
+<section class="form-container">
+    <h2>Edit Session</h2>
+
+    <form method="POST">
+        <div class="form-group">
+            <label for="title">Session Title:</label>
+            <input type="text" id="title" name="title" value="{{ session.title }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="meat_type">Meat Type:</label>
+            <input type="text" id="meat_type" name="meat_type" value="{{ session.meat_type }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="weight">Weight (lbs):</label>
+            <input type="number" id="weight" name="weight" step="0.1" value="{{ session.weight }}">
+        </div>
+
+        <div class="form-group">
+            <label for="smoker_type">Smoker Type:</label>
+            <input type="text" id="smoker_type" name="smoker_type" value="{{ session.smoker_type }}">
+        </div>
+
+        <div class="form-group">
+            <label for="wood_type">Wood Type:</label>
+            <input type="text" id="wood_type" name="wood_type" value="{{ session.wood_type }}">
+        </div>
+
+        <div class="form-group">
+            <label for="target_temp">Target Temperature (°F):</label>
+            <input type="number" id="target_temp" name="target_temp" value="{{ session.target_temp }}">
+        </div>
+
+
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="complete" name="complete">
+            <label class="form-check-label" for="complete">
+                Mark Session Complete
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+</section>
+{% endblock %}
+
