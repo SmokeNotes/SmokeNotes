@@ -1,6 +1,7 @@
 services:
   smokenotes:
-    container_name: ghcr.io/smokenotes/smokenotes:latest
+    image: ghcr.io/smokenotes/smokenotes:latest
+    container_name: smokenotes
     ports:
       - "5000:5000"
     volumes:
@@ -8,10 +9,7 @@ services:
     restart: unless-stopped
     environment:
       - FLASK_ENV=production
-      - TZ=America/New_York
       - DATABASE_PATH=/app/data/bbq_sessions.db
-      - PUID=1000
-      - PGID=1000
       - OPENWEATHER_API_KEY=
       - DEFAULT_ZIP_CODE=
     user: "1000:1000" # This should match your host user ID (adjust if needed)
