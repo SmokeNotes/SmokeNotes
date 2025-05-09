@@ -12,8 +12,24 @@ services:
       - DATABASE_PATH=/app/data/bbq_sessions.db
       - OPENWEATHER_API_KEY=
       - DEFAULT_ZIP_CODE=
-    user: "1000:1000" # This should match your host user ID (adjust if needed)
+  #If you're not using a flameboss device you can remove the below configuration and use smokenotes locally.
+  smokenotes_mqtt:
+    image: ghcr.io/smokenotes/smokenotes_mqtt:latest
+    container_name: smokenotes_mqtt
+    depends_on:
+      - smokenotes
+    restart: unless-stopped
+    volumes:
+      - ./data/:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_PATH=/app/data/bbq_sessions.db
+      # For help with these settings see
+      #https://support.flameboss.com/support/solutions/articles/14000129040-connect-to-flame-boss-cloud-mqtt-broker
+      - MQTT_BROKER=s4.myflameboss.com
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=
+      - MQTT_PASSWORD=
+        #if using public cooks change /data to /open
+      - MQTT_TOPIC=flameboss/your_flameboss_device_id/send/data
 
-# Include smokenotes_mqtt if you want the mqtt client to grab cooks from flameboss
-#include:
-  # - smokenotes_mqtt/docker-compose.yml
