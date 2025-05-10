@@ -44,7 +44,7 @@ jobs:
         with:
           context: smokenotes_mqtt/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}:$VERSION 
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       
