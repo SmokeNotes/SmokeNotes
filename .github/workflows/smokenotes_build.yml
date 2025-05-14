@@ -2,48 +2,86 @@ name: Smokenotes Image CI
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  VERSION: 1.0
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-
 jobs:
-
   build-and-push-image:
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       attestations: write
       id-token: write
-
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
-        
+        with:
+          fetch-depth: 0
+          
+      - name: Calculate version
+        id: calculate_version
+        run: |
+          # Get the latest tag or start with 0.0.0 if none exists
+          git fetch --tags
+          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n 1)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            # No tags exist yet
+            NEW_VERSION="0.1.0"
+          else
+            # Strip the 'v' prefix
+            CURRENT_VERSION=${LATEST_TAG#v}
+            
+            # Split the version
+            IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+            MAJOR=${VERSION_PARTS[0]}
+            MINOR=${VERSION_PARTS[1]}
+            PATCH=${VERSION_PARTS[2]}
+            
+            # Increment the patch version
+            PATCH=$((PATCH + 1))
+            
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          fi
+          
+          echo "Setting version to $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Create and push git tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "v${{ steps.calculate_version.outputs.version }}" -m "Release v${{ steps.calculate_version.outputs.version }}"
+          git push origin "v${{ steps.calculate_version.outputs.version }}"
+      
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
+          tags: |
+            type=raw,value=latest
+            type=raw,value=v${{ steps.calculate_version.outputs.version }}
+            type=semver,pattern={{version}},value=v${{ steps.calculate_version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.calculate_version.outputs.version }}
+            type=semver,pattern={{major}},value=v${{ steps.calculate_version.outputs.version }}
+            type=ref,event=branch
+            type=sha,format=short
       - name: Build and push Docker image
         id: push_smokenote
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }} 
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
