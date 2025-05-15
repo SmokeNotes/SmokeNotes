@@ -41,12 +41,14 @@ SmokeNotes is a self-hosted application designed for people who want to track, a
 - **Mobile-Friendly**: Use on your phone or tablet while at the smoker
 - **Self-Hosted**: Keep all your BBQ data private and local
 
+## 🛠️ Technology Stack
+
 - **Frontend**: Flask templates with responsive design
 - **Backend**: Python Flask application
 - **Database**: SQLite 
 - **Containers**: Docker and Docker Compose for deployment
-- **SmokeNotes MQTT**: Separate service that listens for FlameBoss data and updates your session.
-- **After Session Graphing** Graph your data from Flameboss using the Get the Raw Data from inside the myflameboss cook page.
+- **SmokeNotes MQTT**: Separate service that listens for FlameBoss data and updates your session
+- **After Session Graphing**: Graph your data from Flameboss using the "Get the Raw Data" option from inside the myflameboss cook page
 
 ## 📦 Requirements
 
@@ -65,27 +67,25 @@ git clone https://github.com/SmokeNotes/smokenotes.git
 cd smokenotes
 ```
 
-
 2. Update the environment variables in both files:
-   Note: You'll need a free openweathermap api key from
-   https://openweathermap.org/
 
 `docker-compose.yml`:
+```yaml
+environment:
+  - OPENWEATHER_API_KEY=your_api_key_here  # Get a free key from https://openweathermap.org/
+  - DEFAULT_ZIP_CODE=90210
 ```
-- OPENWEATHER_API_KEY=
-- DEFAULT_ZIP_CODE=90210
-```
-Instructions to get your flameboss mqtt username/password
-`.env.mqtt`:
+
+
 ```
 # For help with these settings see
-#https://support.flameboss.com/support/solutions/articles/14000129040-connect-to-flame-boss-cloud-mqtt-broker
-- MQTT_BROKER=s4.myflameboss.com
-- MQTT_PORT=1883
-- MQTT_USERNAME=
-- MQTT_PASSWORD=
-  If you're using public cooks change /data to /open
-- MQTT_TOPIC=flameboss/your_flameboss_device_id/send/data
+# https://support.flameboss.com/support/solutions/articles/14000129040-connect-to-flame-boss-cloud-mqtt-broker
+MQTT_BROKER=s4.myflameboss.com
+MQTT_PORT=1883
+MQTT_USERNAME=your_username
+MQTT_PASSWORD=your_password
+# If you're using public cooks change /data to /open
+MQTT_TOPIC=flameboss/your_flameboss_device_id/send/data
 ```
 
 ### Installation
@@ -117,20 +117,20 @@ The application will be available at http://localhost:5000 (or the port specifie
    - Meat type
    - Smoker type
    - Target temperatures
-
 3. Start your session and begin logging data
 
 ### Logging Data
 
 You can log data in two ways:
 
-1. **Manual Entry**: Use the "New session" button to manually record:
-   - Smoker Target Temperatur in °F
+1. **Manual Entry**: Use the "New Session" button to initially set up:
+   - Smoker Target Temperature in °F
    - Meat Type
    - Meat Weight
    - Smoker Type
    - Wood Type
    
+   During an active session, you can manually add temperature readings and notes.
 
 2. **Automatic Logging**: If you've set up the FlameBoss MQTT integration, data will be automatically recorded at regular intervals.
 
@@ -140,12 +140,11 @@ You can log data in two ways:
 - Analyze temperature curves over time
 - Compare multiple sessions to improve your technique
 
-
 ## 🔌 FlameBoss MQTT Integration
 
 SmokeNotes includes an MQTT service that connects to the FlameBoss MQTT stream to automatically log cooking data:
 
-1. Update the MQTT credentials in the docker-compose.yml
+1. Update the MQTT credentials in your compose or .env file.
 2. The MQTT service will:
    - Create a new session automatically when data is first received
    - Record pit and meat temperatures at regular intervals
@@ -153,39 +152,36 @@ SmokeNotes includes an MQTT service that connects to the FlameBoss MQTT stream t
 
 To add additional information to auto-created sessions, use the "Edit Session" button to update details like meat type, weight, and notes.
 
+## ⚙️ Environment Variables
 
-### Environment Variables
-
-#### Application 
+### Application 
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| OPENWEATHER_API_KEY | Optional API key for weather data| NULL |
-| DEFAULT_ZIP_CODE | Your zip code to get local weather| 90210 |
+| OPENWEATHER_API_KEY | Optional API key for weather data | NULL |
+| DEFAULT_ZIP_CODE | Your zip code to get local weather | 90210 |
 
-
-#### MQTT 
+### MQTT 
 
 | Variable | Description | Example |
 |----------|-------------|---------|
 | MQTT_BROKER | FlameBoss MQTT broker address | s4.myflameboss.com |
 | MQTT_PORT | MQTT broker port | 1883 |
-| MQTT_USERNAME | Your FlameBoss account username | T-30837|
+| MQTT_USERNAME | Your FlameBoss account username | T-30837 |
 | MQTT_PASSWORD | Your FlameBoss account password | lmi3nfjsds |
 | MQTT_TOPIC | Topic to subscribe to | flameboss/device_id/send/data |
-
 
 ## ❓ Troubleshooting
 
 ### Common Issues
 
 1. **MQTT connection issues**
-   - Verify your FlameBoss credentials in the docker-compose variables
+   - Verify your FlameBoss credentials in the correctly entered.
    - Check that your FlameBoss device is online and properly configured
-   - Look at the smokenotes mqtt logs: `docker-compose logs `
+   - Look at the SmokeNotes MQTT logs: `docker-compose logs smokenotes_mqtt`
 
 2. **No data appearing in graphs**
-   - Confirm that the smokenotes mqtt container is receiving data
+   - Confirm that the SmokeNotes MQTT container is receiving data
    - Check database connectivity
    - Verify that you have an active session
 
@@ -196,7 +192,7 @@ To add additional information to auto-created sessions, use the "Edit Session" b
 
 4. **Database errors**
    - Check file permissions for the SQLite database
-   - Verify database connection strings in both environment files
+   - Verify database connection strings in the environment files
 
 ## 👥 Contributing
 
@@ -206,22 +202,17 @@ To add additional information to auto-created sessions, use the "Edit Session" b
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Screenshots
+## 📸 Screenshots
 
-![image](https://github.com/user-attachments/assets/5127b81d-e63d-435b-bbb1-0a7c1a147a58)
+Add current weather to your notes with 1 click (API key needed):
+![Weather Integration](https://github.com/user-attachments/assets/513cbee9-c1ca-40b9-a6ca-2d3e8395e564)
 
-  Add current weather to your notes with 1 click.
-  ![image](https://github.com/user-attachments/assets/9574e586-f65a-44e7-a8ba-d62c8391dd3c)  
+Real-time graphing locally for your cooks when using MQTT:
+![Real-time Graphing](https://github.com/user-attachments/assets/5912fa6a-3515-41d7-96e0-28cbbe06c405)
 
-  Real time graphing locally for your cooks when using MQTT.
-  ![image](https://github.com/user-attachments/assets/9789ba2a-c9a7-445e-8d67-54be660b2c69)
-
-  Keep track of your past cooks easily.
-  ![image](https://github.com/user-attachments/assets/52226fd4-df4d-4c22-b046-ade26ae7d438)
-
-
-
+Keep track of your past cooks easily:
+![Cook History](https://github.com/user-attachments/assets/7229c7b0-d338-41e5-af5c-528b441fadee)
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE.md](LICENSE.md) file for details.
