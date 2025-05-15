@@ -33,7 +33,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
-            type=ref,event=branch
             type=sha
       - name: Build and push Docker image
         id: push_smokenote
