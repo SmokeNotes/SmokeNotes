@@ -3,12 +3,13 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY requirements.txt .
+COPY run.py .
 
 # Install system dependencies
     
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY  app/ app/
 
 # Ensure data directory has proper permissions
 RUN mkdir -p data
