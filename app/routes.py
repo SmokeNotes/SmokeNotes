@@ -20,6 +20,8 @@ from werkzeug.utils import secure_filename
 from app.graph_utils import generate_graph_from_csv
 from functools import wraps
 from sqlalchemy.sql import func
+import csv
+from io import StringIO
 
 load_dotenv()
 
@@ -535,4 +537,78 @@ def add_weather(session_id):
     
     flash("Detailed weather information added successfully", "success")
     return redirect(url_for("main.view_session", session_id=session_id))
+
+###Add export csv###
+from io import StringIO
+from flask import make_response
+import traceback
+from app.models import TemperatureLog
+
+
+@main.route("/session/<int:session_id>/export-csv")
+def export_session_csv(session_id):
+    """Export a single BBQ session to CSV format"""
+    try:
+        session = BBQSession.query.get_or_404(session_id)
+        
+        # Get all related data
+        temperatures = Temperature.query.filter_by(session_id=session_id).order_by(Temperature.timestamp).all()
+        notes = NoteEntry.query.filter_by(session_id=session_id).order_by(NoteEntry.timestamp).all()
+        temp_logs = TemperatureLog.query.filter_by(session_id=session_id).order_by(TemperatureLog.timestamp).all()
+        
+        output = StringIO()
+        
+        # Session overview
+        output.write("BBQ Session Export\n")
+        output.write(f"Session: {session.title}\n")
+        output.write(f"Meat Type: {session.meat_type}\n")
+        output.write(f"Weight: {session.weight or 'N/A'}\n")
+        output.write(f"Smoker: {session.smoker_type or 'N/A'}\n")
+        output.write(f"Wood: {session.wood_type or 'N/A'}\n")
+        output.write(f"Target Temp: {session.target_temp or 'N/A'}\n")
+        output.write(f"Start Time: {session.start_time}\n")
+        output.write(f"End Time: {session.end_time or 'Ongoing'}\n")
+        output.write(f"Duration: {session.duration()}\n")
+        output.write("\n")
+        
+        # Manual temperature readings
+        if temperatures:
+            output.write("Manual Temperature Readings\n")
+            output.write("Timestamp,Meat Temp (°F),Smoker Temp (°F),Notes\n")
+            for temp in temperatures:
+                output.write(f"{temp.timestamp},{temp.meat_temp or ''},{temp.smoker_temp or ''},{temp.note or ''}\n")
+            output.write("\n")
+        
+        # Automatic temperature logs
+        if temp_logs:
+            output.write("Automatic Temperature Logs\n")
+            output.write("Timestamp,Cook ID,Set Temp (°F),Pit Temp (°F),Meat Temp 1 (°F),Blower\n")
+            for log in temp_logs:
+                output.write(f"{log.timestamp},{log.cook_id or ''},{log.set_temp or ''},{log.pit_temp or ''},{log.meat_temp1 or ''},{log.blower or ''}\n")
+            output.write("\n")
+        
+        # Notes
+        if notes:
+            output.write("Session Notes\n")
+            output.write("Timestamp,Note\n")
+            for note in notes:
+                # Clean HTML from notes
+                clean_note = note.text.replace('<br>', ' ').replace('\n', ' ').replace('\r', ' ')
+                output.write(f"{note.timestamp},\"{clean_note}\"\n")
+        
+        # Create response
+        response = make_response(output.getvalue())
+        response.headers["Content-Disposition"] = f"attachment; filename={session.title.replace(' ', '_')}_export.csv"
+        response.headers["Content-type"] = "text/csv"
+        
+        return response
+    
+    except Exception as e:
+        # Debug: Print the error to console/logs
+        print(f"CSV Export Error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        
+        # Return a simple error response
+        return f"Export failed: {str(e)}", 500
+
 
