@@ -39,6 +39,7 @@ SmokeNotes is a self-hosted application designed for people who want to track, a
 - **Data Visualization**: View temperature graphs and trends over time
 - **Searchable History**: Quickly find past cooks for reference
 - **Mobile-Friendly**: Use on your phone or tablet while at the smoker
+- **Export your data**: Download your finalized cook data in CSV format
 - **Self-Hosted**: Keep all your BBQ data private and local
 
 ## 🛠️ Technology Stack
