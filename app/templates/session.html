@@ -315,6 +315,22 @@
         {% else %}
             <p>No external data graphs uploaded yet. Upload a CSV file to generate a graph.</p>
         {% endif %}
+            </div>
+       <div class="card mt-3">
+        <div class="card-header">
+            <h5>Export Session Data</h5>
+        </div>
+        <div class="card-body">
+            <p>Export this BBQ session data as a CSV file:</p>
+            <a href="{{ url_for('main.export_session_csv', session_id=session.id) }}"
+               class="btn">
+                <i class="fas fa-file-csv"></i> Export as CSV
+            </a>
+            <small class="text-muted d-block mt-2">
+                Exports include session details, temperature readings, automatic logs, and notes.
+            </small>
+        </div>
+    </div>
     </div>
     {% endif %}
 </section>
