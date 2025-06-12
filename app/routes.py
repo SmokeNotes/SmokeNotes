@@ -27,18 +27,43 @@ load_dotenv()
 
 main = Blueprint("main", __name__)
 
-# Define list of common timezones for dropdown selection (can be expanded)
-COMMON_TIMEZONES = [
-    "UTC",
-    "US/Eastern",
-    "US/Central",
-    "US/Mountain",
-    "US/Pacific",
-    "Europe/London",
-    "Europe/Paris",
-    "Asia/Tokyo",
-    "Australia/Sydney",
-]
+# Get available timezones from environment variable or use defaults
+def get_available_timezones():
+    """
+    Get list of available timezones from environment variable
+    Falls back to common timezones if not set
+    """
+    # Get from environment variable (comma-separated list)
+    env_timezones = os.getenv('AVAILABLE_TIMEZONES')
+    
+    if env_timezones:
+        # Split by comma and strip whitespace
+        timezones = [tz.strip() for tz in env_timezones.split(',')]
+        
+        # Validate each timezone
+        valid_timezones = []
+        for tz in timezones:
+            try:
+                pytz.timezone(tz)
+                valid_timezones.append(tz)
+            except pytz.UnknownTimeZoneError:
+                print(f"Warning: Invalid timezone '{tz}' in AVAILABLE_TIMEZONES")
+        
+        if valid_timezones:
+            return valid_timezones
+    
+    # Fallback to default list
+    return [
+        "UTC",
+        "US/Eastern",
+        "US/Central",
+        "US/Mountain",
+        "US/Pacific",
+        "Europe/London",
+        "Europe/Paris",
+        "Asia/Tokyo",
+        "Australia/Sydney",
+    ]
 
 
 # Add error handler for 404 errors
@@ -50,18 +75,29 @@ def page_not_found(e):
 # Function to get the user's timezone
 def get_timezone():
     """
-    Get the user's timezone from session or use default
+    Get the user's timezone with priority:
+    1. User's session selection
+    2. Environment variable default
+    3. UTC fallback
     """
-    # First try to get from session (if user has selected/saved preference)
+    # First try to get from session (if user has selected a preference)
     user_timezone = session.get("user_timezone")
-
-    # If not in session, try to get from browser
+    
+    # If not in session, try environment variable default
+    if not user_timezone:
+        user_timezone = os.getenv('TZ', 'UTC')
+    
+    # If still not set, try browser cookie
     if not user_timezone:
         user_timezone = request.cookies.get("timezone", "UTC")
-        # Store in session for future use
-        session["user_timezone"] = user_timezone
-
-    return user_timezone
+    
+    # Validate the timezone
+    try:
+        pytz.timezone(user_timezone)
+        return user_timezone
+    except pytz.UnknownTimeZoneError:
+        print(f"Warning: Invalid timezone '{user_timezone}'. Using UTC instead.")
+        return 'UTC'
 
 
 # Add route for user to change their timezone
@@ -147,7 +183,8 @@ def inject_timezone_utilities():
         "format_datetime": format_datetime,
         "time_since": time_since,
         "user_timezone": get_timezone,
-        "available_timezones": COMMON_TIMEZONES,
+        "current_timezone": get_timezone(),
+        "available_timezones": get_available_timezones(),
     }
 
 
@@ -610,5 +647,3 @@ def export_session_csv(session_id):
         
         # Return a simple error response
         return f"Export failed: {str(e)}", 500
-
-
