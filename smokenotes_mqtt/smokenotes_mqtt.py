@@ -72,9 +72,13 @@ last_seen_cook_id = {}  # "latest": cook_id
 # ------------------------------
 # MQTT Handlers
 # ------------------------------
-def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT broker with result code " + str(rc))
-    client.subscribe(MQTT_TOPIC)
+def on_connect(client, userdata, flags, reason_code, properties):
+    """Callback for when the client receives a CONNACK response from the server."""
+    if reason_code == 0:
+        print("Connected to MQTT broker successfully")
+        client.subscribe(MQTT_TOPIC)
+    else:
+        print(f"Failed to connect to MQTT broker with reason code: {reason_code}")
 
 
 def on_message(client, userdata, msg):
@@ -250,7 +254,7 @@ if __name__ == "__main__":
         db.create_all()
     persist_latest_temps()
 
-    client = mqtt.Client()
+    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     client.on_connect = on_connect
     client.on_message = on_message
