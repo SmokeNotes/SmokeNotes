@@ -12,6 +12,7 @@ services:
       - DATABASE_PATH=/app/data/bbq_sessions.db
       - OPENWEATHER_API_KEY=
       - DEFAULT_ZIP_CODE=
+      - TZ=UTC
   #If you're not using a flameboss device you can remove the below configuration and use smokenotes locally.
   smokenotes_mqtt:
     image: ghcr.io/smokenotes/smokenotes_mqtt:latest
