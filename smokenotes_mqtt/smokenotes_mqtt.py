@@ -36,8 +36,8 @@ class BBQSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
     meat_type = db.Column(db.String(100))
-    start_time = db.Column(DateTime(timezone=True))
-    end_time = db.Column(DateTime(timezone=True))
+    start_time = db.Column(db.DateTime(timezone=True))
+    end_time = db.Column(db.DateTime(timezone=True))
     target_temp = db.Column(db.Float)
 
 
@@ -46,7 +46,7 @@ class TemperatureLog(db.Model):
     cook_id = db.Column(db.Integer, index=True)
     session_id = db.Column(db.Integer, db.ForeignKey("b_b_q_session.id"), nullable=True)
     #timestamp = db.Column(db.DateTime, server_default=func.now())
-    timestamp = db.Column(DateTime(timezone=True), server_default=func.now())
+    timestamp = db.Column(db.DateTime(timezone=True), server_default=func.now())
     set_temp = db.Column(db.Float)
     pit_temp = db.Column(db.Float)
     meat_temp1 = db.Column(db.Float)
@@ -57,7 +57,7 @@ class Temperature(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, index=True)
     #timestamp = db.Column(db.DateTime, default=func.now())
-    timestamp = db.Column(DateTime(timezone=True), server_default=func.now())
+    timestamp = db.Column(db.DateTime(timezone=True), server_default=func.now())
     meat_temp = db.Column(db.Float)
     smoker_temp = db.Column(db.Float)
     note = db.Column(db.String(100))  # added for note "From Flameboss"
