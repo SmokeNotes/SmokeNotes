@@ -15,7 +15,7 @@ from app import db
 import os
 from dotenv import load_dotenv
 import io
-import pytz
+from zoneinfo import ZoneInfo, available_timezones
 from werkzeug.utils import secure_filename
 from app.graph_utils import generate_graph_from_csv
 from functools import wraps
@@ -44,26 +44,29 @@ def get_available_timezones():
         valid_timezones = []
         for tz in timezones:
             try:
-                pytz.timezone(tz)
+                ZoneInfo(tz)
                 valid_timezones.append(tz)
-            except pytz.UnknownTimeZoneError:
+            except Exception:  # ZoneInfo raises various exceptions for invalid zones
                 print(f"Warning: Invalid timezone '{tz}' in AVAILABLE_TIMEZONES")
         
         if valid_timezones:
             return valid_timezones
     
-    # Fallback to default list
+    # Fallback to default list using canonical IANA timezone identifiers
     return [
-        "UTC",
-        "US/Eastern",
-        "US/Central",
-        "US/Mountain",
-        "US/Pacific",
-        "Europe/London",
-        "Europe/Paris",
-        "Asia/Tokyo",
-        "Australia/Sydney",
-    ]
+    "UTC",
+    "America/New_York",        # Eastern Time
+    "America/Chicago",         # Central Time  
+    "America/Denver",          # Mountain Time
+    "America/Los_Angeles",     # Pacific Time
+    "America/Anchorage",       # Alaska Time
+    "Pacific/Honolulu",        # Hawaii Time
+    "America/Phoenix",         # Arizona (no DST)
+    "Europe/London",
+    "Europe/Paris",
+    "Asia/Tokyo",
+    "Australia/Sydney",
+]
 
 
 # Add error handler for 404 errors
@@ -93,9 +96,9 @@ def get_timezone():
     
     # Validate the timezone
     try:
-        pytz.timezone(user_timezone)
+        ZoneInfo(user_timezone)
         return user_timezone
-    except pytz.UnknownTimeZoneError:
+    except Exception:
         print(f"Warning: Invalid timezone '{user_timezone}'. Using UTC instead.")
         return 'UTC'
 
@@ -107,7 +110,7 @@ def set_timezone():
     timezone_name = request.form.get("timezone", "UTC")
 
     # Validate the timezone name
-    if timezone_name in pytz.all_timezones:
+    if timezone_name in available_timezones():
         session["user_timezone"] = timezone_name
 
         # Also set in cookie for persistence
@@ -139,10 +142,10 @@ def inject_timezone_utilities():
 
         # Ensure datetime is timezone aware - assume UTC if naive
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=pytz.UTC)
+            dt = dt.replace(tzinfo=ZoneInfo('UTC'))
 
         # Convert to user's timezone
-        user_tz = pytz.timezone(get_timezone())
+        user_tz = ZoneInfo(get_timezone())
         local_dt = dt.astimezone(user_tz)
 
         # Format according to provided format string
@@ -157,12 +160,12 @@ def inject_timezone_utilities():
 
         # Ensure datetime is timezone aware - assume UTC if naive
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=pytz.UTC)
+            dt = dt.replace(tzinfo=ZoneInfo('UTC'))
 
         # Get current time from database for consistency
         from sqlalchemy import text
 
-        now = datetime.utcnow().replace(tzinfo=pytz.UTC)
+        now = datetime.utcnow().replace(tzinfo=ZoneInfo('UTC'))
 
         diff = now - dt
 
@@ -192,41 +195,36 @@ def inject_timezone_utilities():
 @main.route("/session/<int:session_id>/upload_csv", methods=["POST"])
 def upload_csv(session_id):
     session = BBQSession.query.get_or_404(session_id)
-
     if "csv_file" not in request.files:
         flash("No file part")
         return redirect(url_for("main.view_session", session_id=session_id))
-
     file = request.files["csv_file"]
-
     if file.filename == "":
         flash("No selected file")
         return redirect(url_for("main.view_session", session_id=session_id))
-
     if file and file.filename.endswith(".csv"):
         # Read the file
         file_content = file.read()
-
         try:
-            # Generate graph image
-            image_data = generate_graph_from_csv(file_content)
-
+            # Get user's timezone using the existing function
+            user_timezone = get_timezone()
+            
+            # Generate graph image with user's timezone
+            image_data = generate_graph_from_csv(file_content, timezone=user_timezone)
+            
             # Create Graph record
             filename = secure_filename(file.filename)
             graph = Graph(
                 filename=filename, image_data=image_data, session_id=session_id
             )
-
             db.session.add(graph)
             db.session.commit()
-
             flash("CSV uploaded and graph generated successfully")
         except Exception as e:
             flash(f"Error processing CSV: {str(e)}")
             print(f"Error: {str(e)}")
     else:
         flash("Only CSV files are allowed")
-
     return redirect(url_for("main.view_session", session_id=session_id))
 
 

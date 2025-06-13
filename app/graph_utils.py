@@ -5,12 +5,14 @@ import matplotlib.ticker as ticker
 import io
 import os
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 
 
 def generate_graph_from_csv(
-    file_content, timezone="America/New_York", tick_interval_minutes=15
+    file_content, timezone="UTC", tick_interval_minutes=15
 ):
+    if timezone is None:
+        timezone = "UTC"  # or call get_timezone() if available
     """Generate a graph from CSV data and return the image bytes"""
 
     # Create a file-like object from the content
@@ -33,7 +35,7 @@ def generate_graph_from_csv(
             data["timestamp"] = pd.to_datetime(data[first_col]).dt.tz_localize(timezone)
         except:
             # If all else fails, use index as time
-            current_time = datetime.now(pytz.timezone(timezone))
+            current_time = datetime.now(ZoneInfo(timezone))
             data["timestamp"] = pd.date_range(
                 end=current_time, periods=len(data), freq="T"
             ).tz_localize(timezone)
@@ -135,7 +137,7 @@ def generate_graph_from_csv(
 
 
 def generate_graph_from_db(
-    temp_logs, timezone="America/New_York", tick_interval_minutes=15
+    temp_logs, timezone="UTC", tick_interval_minutes=15
 ):
     """Generate a graph from TemperatureLog data and return the image bytes"""
     import pandas as pd
@@ -143,7 +145,7 @@ def generate_graph_from_db(
     import matplotlib.dates as mdates
     import matplotlib.ticker as ticker
     import io
-    import pytz
+    from zoneinfo import ZoneInfo
     from datetime import datetime
 
     # Convert temperature logs to pandas DataFrame
@@ -183,11 +185,11 @@ def generate_graph_from_db(
 
     # Make sure timestamp is timezone aware - assume UTC if naive
     if not df.empty and df["timestamp"].iloc[0].tzinfo is None:
-        df["timestamp"] = df["timestamp"].apply(lambda dt: dt.replace(tzinfo=pytz.UTC))
+        df["timestamp"] = df["timestamp"].apply(lambda dt: dt.replace(tzinfo=ZoneInfo("UTC")))
 
     # Convert to user's timezone
     if not df.empty:
-        user_tz = pytz.timezone(timezone)
+        user_tz = ZoneInfo(timezone)
         df["timestamp"] = df["timestamp"].apply(lambda dt: dt.astimezone(user_tz))
 
     # Calculate total elapsed time if we have data
@@ -241,7 +243,7 @@ def generate_graph_from_db(
     # Format x-axis to show only time
     try:
         # Use user's timezone for formatting
-        user_tz = pytz.timezone(timezone)
+        user_tz = ZoneInfo(timezone)
         local_formatter = mdates.DateFormatter("%H:%M:%S", tz=user_tz)
         ax.xaxis.set_major_formatter(local_formatter)
 
