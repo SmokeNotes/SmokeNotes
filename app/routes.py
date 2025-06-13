@@ -6,7 +6,6 @@ from flask import (
     url_for,
     flash,
     send_file,
-    g,
     session,
 )
 from datetime import datetime
@@ -18,9 +17,7 @@ import io
 from zoneinfo import ZoneInfo, available_timezones
 from werkzeug.utils import secure_filename
 from app.graph_utils import generate_graph_from_csv
-from functools import wraps
 from sqlalchemy.sql import func
-import csv
 from io import StringIO
 
 load_dotenv()
