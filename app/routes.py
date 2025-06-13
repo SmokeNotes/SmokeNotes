@@ -195,41 +195,36 @@ def inject_timezone_utilities():
 @main.route("/session/<int:session_id>/upload_csv", methods=["POST"])
 def upload_csv(session_id):
     session = BBQSession.query.get_or_404(session_id)
-
     if "csv_file" not in request.files:
         flash("No file part")
         return redirect(url_for("main.view_session", session_id=session_id))
-
     file = request.files["csv_file"]
-
     if file.filename == "":
         flash("No selected file")
         return redirect(url_for("main.view_session", session_id=session_id))
-
     if file and file.filename.endswith(".csv"):
         # Read the file
         file_content = file.read()
-
         try:
-            # Generate graph image
-            image_data = generate_graph_from_csv(file_content)
-
+            # Get user's timezone using the existing function
+            user_timezone = get_timezone()
+            
+            # Generate graph image with user's timezone
+            image_data = generate_graph_from_csv(file_content, timezone=user_timezone)
+            
             # Create Graph record
             filename = secure_filename(file.filename)
             graph = Graph(
                 filename=filename, image_data=image_data, session_id=session_id
             )
-
             db.session.add(graph)
             db.session.commit()
-
             flash("CSV uploaded and graph generated successfully")
         except Exception as e:
             flash(f"Error processing CSV: {str(e)}")
             print(f"Error: {str(e)}")
     else:
         flash("Only CSV files are allowed")
-
     return redirect(url_for("main.view_session", session_id=session_id))
 
 
