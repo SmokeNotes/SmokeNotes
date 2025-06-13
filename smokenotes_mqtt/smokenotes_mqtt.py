@@ -3,7 +3,7 @@ import json
 import os
 import threading
 from datetime import datetime
-import pytz
+from zoneinfo import ZoneInfo
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
@@ -36,8 +36,8 @@ class BBQSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
     meat_type = db.Column(db.String(100))
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
+    start_time = db.Column(DateTime(timezone=True))
+    end_time = db.Column(DateTime(timezone=True))
     target_temp = db.Column(db.Float)
 
 
@@ -45,7 +45,8 @@ class TemperatureLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     cook_id = db.Column(db.Integer, index=True)
     session_id = db.Column(db.Integer, db.ForeignKey("b_b_q_session.id"), nullable=True)
-    timestamp = db.Column(db.DateTime, server_default=func.now())
+    #timestamp = db.Column(db.DateTime, server_default=func.now())
+    timestamp = db.Column(DateTime(timezone=True), server_default=func.now())
     set_temp = db.Column(db.Float)
     pit_temp = db.Column(db.Float)
     meat_temp1 = db.Column(db.Float)
@@ -55,7 +56,8 @@ class TemperatureLog(db.Model):
 class Temperature(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, index=True)
-    timestamp = db.Column(db.DateTime, default=func.now())
+    #timestamp = db.Column(db.DateTime, default=func.now())
+    timestamp = db.Column(DateTime(timezone=True), server_default=func.now())
     meat_temp = db.Column(db.Float)
     smoker_temp = db.Column(db.Float)
     note = db.Column(db.String(100))  # added for note "From Flameboss"
@@ -97,7 +99,7 @@ def on_message(client, userdata, msg):
 
             def set_end_time():
                 with app.app_context():
-                    now = datetime.utcnow()
+                    now = datetime.now(ZoneInfo("UTC"))
                     db.session.execute(
                         text(
                             "UPDATE bbq_session SET end_time = :end_time WHERE id = :cook_id"
@@ -129,7 +131,7 @@ def on_message(client, userdata, msg):
             del disconnection_timers[cook_id]
             print(f"Disconnection timer cancelled for cook_id {cook_id}")
 
-        timestamp = datetime.utcfromtimestamp(payload["sec"]).replace(tzinfo=None)
+        timestamp = datetime.fromtimestamp(payload["sec"], tz=ZoneInfo("UTC"))
 
         temps = payload.get("temps", [])
         set_temp = payload.get("set_temp")
@@ -221,7 +223,7 @@ def on_message(client, userdata, msg):
 # ------------------------------
 def persist_latest_temps():
     with app.app_context():
-        now = datetime.utcnow()
+        now = datetime.now(ZoneInfo("UTC")).replace(tzinfo=None)
         count = 0
         for session_id, temps in latest_temps.items():
             # Check if session is still active (no end_time)
