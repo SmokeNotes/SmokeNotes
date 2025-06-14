@@ -616,16 +616,7 @@ def export_session_csv(session_id):
             output.write("Automatic Temperature Logs\n")
             output.write("Timestamp,Cook ID,Set Temp (°F),Pit Temp (°F),Meat Temp 1 (°F),Blower\n")
             for log in temp_logs:
-                # Apply formula to blower value: (9/50) * X + 32
-                blower_converted = ''
-                if log.blower is not None:
-                    try:
-                        blower_converted = (9/50) * float(log.blower) + 32
-                        blower_converted = round(blower_converted, 2)  # Round to 2 decimal places
-                    except (ValueError, TypeError):
-                        blower_converted = log.blower  # Keep original if conversion fails
-                
-                output.write(f"{log.timestamp},{log.cook_id or ''},{log.set_temp or ''},{log.pit_temp or ''},{log.meat_temp1 or ''},{blower_converted}\n")
+                output.write(f"{log.timestamp},{log.cook_id or ''},{log.set_temp or ''},{log.pit_temp or ''},{log.meat_temp1 or ''},{log.blower or ''}\n")
             output.write("\n")
         
         # Notes
