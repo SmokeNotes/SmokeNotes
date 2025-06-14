@@ -590,6 +590,18 @@ def export_session_csv(session_id):
         
         output = StringIO()
         
+        # Helper function to format temperature values
+        def format_temp(temp_value):
+            if temp_value is not None and temp_value != '':
+                return f"{temp_value}°F"
+            return ''
+        
+        # Helper function to format blower values
+        def format_blower(blower_value):
+            if blower_value is not None and blower_value != '':
+                return f"{blower_value}%"
+            return ''
+        
         # Session overview
         output.write("BBQ Session Export\n")
         output.write(f"Session: {session.title}\n")
@@ -597,7 +609,7 @@ def export_session_csv(session_id):
         output.write(f"Weight: {session.weight or 'N/A'}\n")
         output.write(f"Smoker: {session.smoker_type or 'N/A'}\n")
         output.write(f"Wood: {session.wood_type or 'N/A'}\n")
-        output.write(f"Target Temp: {session.target_temp or 'N/A'}\n")
+        output.write(f"Target Temp: {format_temp(session.target_temp) or 'N/A'}\n")
         output.write(f"Start Time: {session.start_time}\n")
         output.write(f"End Time: {session.end_time or 'Ongoing'}\n")
         output.write(f"Duration: {session.duration()}\n")
@@ -608,15 +620,21 @@ def export_session_csv(session_id):
             output.write("Manual Temperature Readings\n")
             output.write("Timestamp,Meat Temp (°F),Smoker Temp (°F),Notes\n")
             for temp in temperatures:
-                output.write(f"{temp.timestamp},{temp.meat_temp or ''},{temp.smoker_temp or ''},{temp.note or ''}\n")
+                meat_temp_formatted = format_temp(temp.meat_temp)
+                smoker_temp_formatted = format_temp(temp.smoker_temp)
+                output.write(f"{temp.timestamp},{meat_temp_formatted},{smoker_temp_formatted},{temp.note or ''}\n")
             output.write("\n")
         
         # Automatic temperature logs
         if temp_logs:
             output.write("Automatic Temperature Logs\n")
-            output.write("Timestamp,Cook ID,Set Temp (°F),Pit Temp (°F),Meat Temp 1 (°F),Blower\n")
+            output.write("Timestamp,Cook ID,Set Temp (°F),Pit Temp (°F),Meat Temp 1 (°F),Blower (%)\n")
             for log in temp_logs:
-                output.write(f"{log.timestamp},{log.cook_id or ''},{log.set_temp or ''},{log.pit_temp or ''},{log.meat_temp1 or ''},{log.blower or ''}\n")
+                set_temp_formatted = format_temp(log.set_temp)
+                pit_temp_formatted = format_temp(log.pit_temp)
+                meat_temp1_formatted = format_temp(log.meat_temp1)
+                blower_formatted = format_blower(log.blower)
+                output.write(f"{log.timestamp},{log.cook_id or ''},{set_temp_formatted},{pit_temp_formatted},{meat_temp1_formatted},{blower_formatted}\n")
             output.write("\n")
         
         # Notes
