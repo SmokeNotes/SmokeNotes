@@ -497,8 +497,15 @@ def complete_session(session_id):
 @main.route("/session/<int:session_id>/temp_log_graph")
 def view_temp_log_graph(session_id):
     """Generate graph from both manual Temperature entries and automatic TemperatureLog entries"""
+    import logging
+    
+    # Set up logging to see debug output
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    
     # Get the BBQ session
     session = BBQSession.query.get_or_404(session_id)
+    logger.debug(f"Processing session {session_id}: {session.title}")
 
     # Get automatic temperature logs for this session
     from app.models import TemperatureLog
@@ -515,34 +522,44 @@ def view_temp_log_graph(session_id):
         .all()
     )
 
-    # ADD THESE DEBUG LINES:
-    print(f"DEBUG: Session {session_id}")
-    print(f"  Automatic logs: {len(temp_logs)}")
-    print(f"  Manual temps: {len(manual_temps)}")
-    print(f"  Will use: {'automatic' if temp_logs else 'manual' if manual_temps else 'no data'}")
+    # Enhanced debug logging
+    logger.debug(f"Session {session_id} data:")
+    logger.debug(f"  Automatic logs: {len(temp_logs)}")
+    logger.debug(f"  Manual temps: {len(manual_temps)}")
+    
+    if temp_logs:
+        logger.debug(f"  First auto log: {temp_logs[0].timestamp}")
+        logger.debug(f"  Last auto log: {temp_logs[-1].timestamp}")
+    
+    if manual_temps:
+        logger.debug(f"  First manual temp: {manual_temps[0].timestamp}")
+        logger.debug(f"  Last manual temp: {manual_temps[-1].timestamp}")
+        for i, temp in enumerate(manual_temps[:3]):  # Show first 3
+            logger.debug(f"    Manual {i}: meat={temp.meat_temp}, smoker={temp.smoker_temp}")
 
     # Use the existing timezone function
     user_timezone = get_timezone()
+    logger.debug(f"Using timezone: {user_timezone}")
 
     # Generate graph - prefer automatic logs if available, otherwise use manual entries
-    from app.graph_utils import generate_graph_from_db, generate_graph_from_manual_temps
+    from app.graph_utils import generate_graph_from_db, generate_graph_from_manual_temps, generate_no_data_graph
 
     try:
         if temp_logs:
             # Use automatic temperature logs
-            print("DEBUG: Using automatic temperature logs")
+            logger.debug("Using automatic temperature logs for graph")
             image_data = generate_graph_from_db(temp_logs, timezone=user_timezone)
         elif manual_temps:
             # Use manual temperature entries
-            print("DEBUG: Using manual temperature entries")
+            logger.debug("Using manual temperature entries for graph")
             image_data = generate_graph_from_manual_temps(manual_temps, timezone=user_timezone)
         else:
             # No data available
-            print("DEBUG: No data available, using no_data_graph")
-            from app.graph_utils import generate_no_data_graph
+            logger.debug("No data available, generating no-data graph")
             image_data = generate_no_data_graph()
 
-        print("DEBUG: Graph generation successful")
+        logger.debug("Graph generation completed successfully")
+        
         # Return the image
         return send_file(
             io.BytesIO(image_data),
@@ -550,10 +567,11 @@ def view_temp_log_graph(session_id):
             as_attachment=False,
             download_name=f"temp_log_graph_{session_id}.png",
         )
+        
     except Exception as e:
-        print(f"DEBUG: Exception in graph generation: {str(e)}")
+        logger.error(f"Exception in graph generation: {str(e)}")
         import traceback
-        traceback.print_exc()  # This will show the full error
+        logger.error(f"Traceback: {traceback.format_exc()}")
         flash(f"Error generating graph: {str(e)}", "error")
         return redirect(url_for("main.view_session", session_id=session_id))
 
