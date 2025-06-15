@@ -497,15 +497,13 @@ def complete_session(session_id):
 @main.route("/session/<int:session_id>/temp_log_graph")
 def view_temp_log_graph(session_id):
     """Generate graph from both manual Temperature entries and automatic TemperatureLog entries"""
-    import logging
     
-    # Set up logging to see debug output
-    logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
+    # Simple print statements that will show in Docker logs
+    print(f"=== GRAPH DEBUG: Processing session {session_id} ===")
     
     # Get the BBQ session
     session = BBQSession.query.get_or_404(session_id)
-    logger.debug(f"Processing session {session_id}: {session.title}")
+    print(f"Session found: {session.title}")
 
     # Get automatic temperature logs for this session
     from app.models import TemperatureLog
@@ -522,43 +520,35 @@ def view_temp_log_graph(session_id):
         .all()
     )
 
-    # Enhanced debug logging
-    logger.debug(f"Session {session_id} data:")
-    logger.debug(f"  Automatic logs: {len(temp_logs)}")
-    logger.debug(f"  Manual temps: {len(manual_temps)}")
-    
-    if temp_logs:
-        logger.debug(f"  First auto log: {temp_logs[0].timestamp}")
-        logger.debug(f"  Last auto log: {temp_logs[-1].timestamp}")
+    # Debug output that will show in Docker logs
+    print(f"Automatic temperature logs found: {len(temp_logs)}")
+    print(f"Manual temperature entries found: {len(manual_temps)}")
     
     if manual_temps:
-        logger.debug(f"  First manual temp: {manual_temps[0].timestamp}")
-        logger.debug(f"  Last manual temp: {manual_temps[-1].timestamp}")
-        for i, temp in enumerate(manual_temps[:3]):  # Show first 3
-            logger.debug(f"    Manual {i}: meat={temp.meat_temp}, smoker={temp.smoker_temp}")
-
+        print("Manual temperature details:")
+        for i, temp in enumerate(manual_temps):
+            print(f"  {i+1}: time={temp.timestamp}, meat={temp.meat_temp}, smoker={temp.smoker_temp}")
+    
     # Use the existing timezone function
     user_timezone = get_timezone()
-    logger.debug(f"Using timezone: {user_timezone}")
+    print(f"Using timezone: {user_timezone}")
 
     # Generate graph - prefer automatic logs if available, otherwise use manual entries
     from app.graph_utils import generate_graph_from_db, generate_graph_from_manual_temps, generate_no_data_graph
 
     try:
         if temp_logs:
-            # Use automatic temperature logs
-            logger.debug("Using automatic temperature logs for graph")
+            print("DECISION: Using automatic temperature logs")
             image_data = generate_graph_from_db(temp_logs, timezone=user_timezone)
         elif manual_temps:
-            # Use manual temperature entries
-            logger.debug("Using manual temperature entries for graph")
+            print("DECISION: Using manual temperature entries")
             image_data = generate_graph_from_manual_temps(manual_temps, timezone=user_timezone)
         else:
-            # No data available
-            logger.debug("No data available, generating no-data graph")
+            print("DECISION: No data available, using no-data graph")
             image_data = generate_no_data_graph()
 
-        logger.debug("Graph generation completed successfully")
+        print("Graph generation completed successfully")
+        print(f"Image data size: {len(image_data)} bytes")
         
         # Return the image
         return send_file(
@@ -569,12 +559,12 @@ def view_temp_log_graph(session_id):
         )
         
     except Exception as e:
-        logger.error(f"Exception in graph generation: {str(e)}")
+        print(f"ERROR in graph generation: {str(e)}")
         import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
+        print("Full traceback:")
+        traceback.print_exc()
         flash(f"Error generating graph: {str(e)}", "error")
         return redirect(url_for("main.view_session", session_id=session_id))
-
 
 @main.route("/session/<int:session_id>/add_weather", methods=["POST"])
 def add_weather(session_id):
