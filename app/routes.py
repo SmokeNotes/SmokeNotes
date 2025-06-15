@@ -496,26 +496,42 @@ def complete_session(session_id):
 
 @main.route("/session/<int:session_id>/temp_log_graph")
 def view_temp_log_graph(session_id):
+    """Generate graph from both manual Temperature entries and automatic TemperatureLog entries"""
     # Get the BBQ session
     session = BBQSession.query.get_or_404(session_id)
 
-    # Get all temperature logs for this session
+    # Get automatic temperature logs for this session
     from app.models import TemperatureLog
-
     temp_logs = (
         TemperatureLog.query.filter_by(session_id=session_id)
         .order_by(TemperatureLog.timestamp)
         .all()
     )
 
+    # Get manual temperature entries for this session
+    manual_temps = (
+        Temperature.query.filter_by(session_id=session_id)
+        .order_by(Temperature.timestamp)
+        .all()
+    )
+
     # Use the existing timezone function
     user_timezone = get_timezone()
 
-    # Generate graph
-    from app.graph_utils import generate_graph_from_db
+    # Generate graph - prefer automatic logs if available, otherwise use manual entries
+    from app.graph_utils import generate_graph_from_db, generate_graph_from_manual_temps
 
     try:
-        image_data = generate_graph_from_db(temp_logs, timezone=user_timezone)
+        if temp_logs:
+            # Use automatic temperature logs
+            image_data = generate_graph_from_db(temp_logs, timezone=user_timezone)
+        elif manual_temps:
+            # Use manual temperature entries
+            image_data = generate_graph_from_manual_temps(manual_temps, timezone=user_timezone)
+        else:
+            # No data available
+            from app.graph_utils import generate_no_data_graph
+            image_data = generate_no_data_graph()
 
         # Return the image
         return send_file(
