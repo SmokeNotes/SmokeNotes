@@ -4,6 +4,7 @@
 
 {% block content %}
 <section class="session-details">
+    <!-- Session Header -->
     <div class="session-header">
         <h2>{{ session.title }}</h2>
         <div class="session-actions">
@@ -15,364 +16,317 @@
             </form>
         </div>
     </div>
+
+    <!-- Basic Session Info -->
     <div class="session-info">
         <div class="info-group">
             <h3>Basic Info</h3>
             <p><strong>Meat Type:</strong> {{ session.meat_type }}</p>
-            {% if session.weight %}
-            <p><strong>Weight:</strong> {{ session.weight }} lbs</p>
-            {% endif %}
-            {% if session.smoker_type %}
-            <p><strong>Smoker:</strong> {{ session.smoker_type }}</p>
-            {% endif %}
-            {% if session.wood_type %}
-            <p><strong>Wood:</strong> {{ session.wood_type }}</p>
-            {% endif %}
-            {% if session.target_temp %}
-            <p><strong>Smoker Target Temperature:</strong> {{ session.target_temp }}°F</p>
-            {% endif %}
+            {% for field, label in [('weight', 'Weight'), ('smoker_type', 'Smoker'), ('wood_type', 'Wood'), ('target_temp', 'Smoker Target Temperature')] %}
+                {% if session[field] %}
+                    <p><strong>{{ label }}:</strong> {{ session[field] }}{% if field == 'weight' %} lbs{% elif field == 'target_temp' %}°F{% endif %}</p>
+                {% endif %}
+            {% endfor %}
         </div>
        
         <div class="info-group">
             <h3>Timing</h3>
             <p><strong>Started:</strong> {{ format_datetime(session.start_time, '%A, %B %d, %Y at %I:%M %p') }}</p>
             {% if session.end_time %}
-            <p><strong>Finished:</strong> {{ format_datetime(session.end_time, '%A, %B %d, %Y at %I:%M %p') }}</p>
-            <p><strong>Duration:</strong> {{ session.duration() }}</p>
+                <p><strong>Finished:</strong> {{ format_datetime(session.end_time, '%A, %B %d, %Y at %I:%M %p') }}</p>
+                <p><strong>Duration:</strong> {{ session.duration() }}</p>
             {% else %}
-            <p><strong>Status:</strong> Active (Started {{ time_since(session.start_time) }})</p>
+                <p><strong>Status:</strong> Active (Started {{ time_since(session.start_time) }})</p>
             {% endif %}
         </div>
     </div>
+
+    <!-- Session Notes -->
     <div class="notes-section">
-    <h3>Session Notes</h3>
-    
-    <!-- MODIFIED: Remove condition to always allow adding notes -->
-    <form method="POST" action="{{ url_for('main.add_note', session_id=session.id) }}" class="note-form">
-        <div class="form-group">
-            <label for="note_text">Add Note:</label>
-            <textarea id="note_text" name="note_text" rows="3"></textarea>
-        </div>
+        <h3>Session Notes</h3>
         
-        <button type="submit" class="btn">Add Note</button>
-    </form>
-    <form action="{{ url_for('main.add_weather', session_id=session.id) }}" method="post">
-        <button type="submit" class="btn btn-info btn-sm">
-          <i class="fas fa-cloud"></i> Add Weather Info
-        </button>
-      </form>
-    
-
-    
-    {% if session.notes_entries %}
-    <table class="notes-table">
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Note</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for note in session.notes_entries|sort(attribute='timestamp', reverse=True) %}
-            <tr id="note-row-{{ note.id }}">
-                <td>{{ format_datetime(note.timestamp, '%Y-%m-%d %I:%M %p') }}</td>
-                <td id="note-text-{{ note.id }}">{{ note.text|nl2br|safe }}</td>
-                <td>
-                    <button type="button" class="btn-small" onclick="showEditForm('{{ note.id }}')">Edit</button>
-                </td>
-            </tr>
-            <tr id="edit-form-{{ note.id }}" style="display: none;">
-                <td colspan="3">
-                  <form method="POST" action="{{ url_for('main.edit_note', session_id=session.id, note_id=note.id) }}" class="edit-note-form">
-                    <div class="form-group">
-                        <textarea name="edited_note_text" rows="3">{{ note.text|replace('<br>', '\n')|safe }}</textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-small">Save</button>
-                        <button type="button" class="btn-small" onclick="hideEditForm('{{ note.id }}')">Cancel</button>
-                    </div>
-                  </form>
-
-                  <!-- Delete button form OUTSIDE of edit form -->
-                  <form method="POST" action="{{ url_for('main.delete_note', session_id=session.id, note_id=note.id) }}" class="inline-form" style="margin-top: 5px;">
-                      <button type="submit" class="btn-small btn-danger" onclick="return confirm('Are you sure you want to delete this note?');">Delete</button>
-                  </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    
-    <script>
-        function showEditForm(noteId) {
-            document.getElementById('note-row-' + noteId).style.display = 'none';
-            document.getElementById('edit-form-' + noteId).style.display = 'table-row';
-        }
-        
-        function hideEditForm(noteId) {
-            document.getElementById('edit-form-' + noteId).style.display = 'none';
-            document.getElementById('note-row-' + noteId).style.display = 'table-row';
-        }
-    </script>
-    {% else %}
-    <p>No notes added yet.</p>
-    {% endif %}
-</div>  
-       <div class="temperature-section">
-        <h3>Temperature Log</h3>
-        
-        {% if not session.end_time %}
-        <form method="POST" action="{{ url_for('main.add_temperature', session_id=session.id) }}" class="temp-form">
+        <!-- Add Note Form -->
+        <form method="POST" action="{{ url_for('main.add_note', session_id=session.id) }}" class="note-form">
             <div class="form-group">
-                <label for="meat_temp">Meat Temp (°F):</label>
-                <input type="number" id="meat_temp" name="meat_temp" step="0.1">
+                <label for="note_text">Add Note:</label>
+                <textarea id="note_text" name="note_text" rows="3"></textarea>
             </div>
-            
-            <div class="form-group">
-                <label for="smoker_temp">Smoker Temp (°F):</label>
-                <input type="number" id="smoker_temp" name="smoker_temp" step="0.1">
-            </div>
-            
-            <div class="form-group">
-                <label for="note">Note:</label>
-                <input type="text" id="note" name="note">
-            </div>        
-            <button type="submit" class="btn">Add Temperature</button>
+            <button type="submit" class="btn">Add Note</button>
         </form>
-        {% endif %}
         
-        {% if session.temperatures %}
-        <table class="temp-table">
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Meat Temp</th>
-                    <th>Smoker Temp</th>
-                    <th>Note</th>
-                    {% if not session.end_time %}
-                    <th>Actions</th>
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for temp in session.temperatures|sort(attribute='timestamp', reverse=True) %}
-                <tr id="temp-row-{{ temp.id }}">
-                    <td>{{ format_datetime(temp.timestamp, '%Y-%m-%d %I:%M %p') }}</td>
-                    <td>{% if temp.meat_temp %}{{ temp.meat_temp }}°F{% endif %}</td>
-                    <td>{% if temp.smoker_temp %}{{ temp.smoker_temp }}°F{% endif %}</td>
-                    <td>{{ temp.note }}</td>
-                    {% if not session.end_time %}
-                    <td>
-                        <button type="button" class="btn-small" onclick="showTempEditForm('{{ temp.id }}')">Edit</button>
-                    </td>
-                    {% endif %}
-                </tr>
+        <form action="{{ url_for('main.add_weather', session_id=session.id) }}" method="post">
+            <button type="submit" class="btn btn-info btn-sm">
+                <i class="fas fa-cloud"></i> Add Weather Info
+            </button>
+        </form>
 
-                {% if not session.end_time %}
-                <tr id="temp-edit-form-{{ temp.id }}" style="display: none;">
-                    <td colspan="5">
-                        <form method="POST" action="{{ url_for('main.edit_temperature', session_id=session.id, temp_id=temp.id) }}" class="edit-temp-form">
-                            <div class="form-group">
-                                <label>Meat Temp:</label>
-                                <input type="number" name="meat_temp" value="{{ temp.meat_temp }}" step="0.1">
-                            </div>
-                            <div class="form-group">
-                                <label>Smoker Temp:</label>
-                                <input type="number" name="smoker_temp" value="{{ temp.smoker_temp }}" step="0.1">
-                            </div>
-                            <div class="form-group">
-                                <label>Note:</label>
-                                <input type="text" name="note" value="{{ temp.note }}">
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn-small">Save</button>
-                                <button type="button" class="btn-small" onclick="hideTempEditForm('{{ temp.id }}')">Cancel</button>
-                            </div>
-                        </form>
-
-                        <form method="POST" action="{{ url_for('main.delete_temperature', session_id=session.id, temp_id=temp.id) }}" class="inline-form" style="margin-top: 5px;" onsubmit="return confirm('Are you sure you want to delete this?');">
-                            <button type="submit" class="btn-small btn-danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
-        <script>
-            function showTempEditForm(tempId) {
-                document.getElementById('temp-row-' + tempId).style.display = 'none';
-                document.getElementById('temp-edit-form-' + tempId).style.display = 'table-row';
-            }
-
-            function hideTempEditForm(tempId) {
-                document.getElementById('temp-edit-form-' + tempId).style.display = 'none';
-                document.getElementById('temp-row-' + tempId).style.display = 'table-row';
-            }
-        </script>
+        <!-- Notes Table -->
+        {% if session.notes_entries %}
+            <table class="notes-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Note</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for note in session.notes_entries|sort(attribute='timestamp', reverse=True) %}
+                        <tr id="note-row-{{ note.id }}">
+                            <td>{{ format_datetime(note.timestamp, '%Y-%m-%d %I:%M %p') }}</td>
+                            <td>{{ note.text|nl2br|safe }}</td>
+                            <td>
+                                <button type="button" class="btn-small" onclick="SessionUI.toggleEdit('note', '{{ note.id }}')">Edit</button>
+                            </td>
+                        </tr>
+                        <tr id="note-edit-{{ note.id }}" style="display: none;">
+                            <td colspan="3">
+                                <form method="POST" action="{{ url_for('main.edit_note', session_id=session.id, note_id=note.id) }}" class="edit-note-form">
+                                    <div class="form-group">
+                                        <textarea name="edited_note_text" rows="3">{{ note.text|replace('<br>', '\n')|safe }}</textarea>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button type="submit" class="btn-small">Save</button>
+                                        <button type="button" class="btn-small" onclick="SessionUI.toggleEdit('note', '{{ note.id }}')">Cancel</button>
+                                    </div>
+                                </form>
+                                <form method="POST" action="{{ url_for('main.delete_note', session_id=session.id, note_id=note.id) }}" class="inline-form" style="margin-top: 5px;">
+                                    <button type="submit" class="btn-small btn-danger" onclick="return confirm('Are you sure you want to delete this note?');">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         {% else %}
-        <p>No temperature readings logged yet.</p>
+            <p>No notes added yet.</p>
         {% endif %}
     </div>
 
-    <!-- Temperature Log Graph - Show for both active and completed sessions -->
+    <!-- Temperature Section -->
+    <div class="temperature-section">
+        <h3>Temperature Log</h3>
+        
+        <!-- Temperature Input Form (Active Sessions Only) -->
+        {% if not session.end_time %}
+            <form method="POST" action="{{ url_for('main.add_temperature', session_id=session.id) }}" class="temp-form">
+                {% for field, label, type in [('meat_temp', 'Meat Temp (°F)', 'number'), ('smoker_temp', 'Smoker Temp (°F)', 'number'), ('note', 'Note', 'text')] %}
+                    <div class="form-group">
+                        <label for="{{ field }}">{{ label }}:</label>
+                        <input type="{{ type }}" id="{{ field }}" name="{{ field }}" {% if type == 'number' %}step="0.1"{% endif %}>
+                    </div>
+                {% endfor %}
+                <button type="submit" class="btn">Add Temperature</button>
+            </form>
+        {% endif %}
+        
+        <!-- Temperature Table -->
+        {% if session.temperatures %}
+            <table class="temp-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Meat Temp</th>
+                        <th>Smoker Temp</th>
+                        <th>Note</th>
+                        {% if not session.end_time %}<th>Actions</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for temp in session.temperatures|sort(attribute='timestamp', reverse=True) %}
+                        <tr id="temp-row-{{ temp.id }}">
+                            <td>{{ format_datetime(temp.timestamp, '%Y-%m-%d %I:%M %p') }}</td>
+                            <td>{% if temp.meat_temp %}{{ temp.meat_temp }}°F{% endif %}</td>
+                            <td>{% if temp.smoker_temp %}{{ temp.smoker_temp }}°F{% endif %}</td>
+                            <td>{{ temp.note }}</td>
+                            {% if not session.end_time %}
+                                <td>
+                                    <button type="button" class="btn-small" onclick="SessionUI.toggleEdit('temp', '{{ temp.id }}')">Edit</button>
+                                </td>
+                            {% endif %}
+                        </tr>
+
+                        {% if not session.end_time %}
+                            <tr id="temp-edit-{{ temp.id }}" style="display: none;">
+                                <td colspan="5">
+                                    <form method="POST" action="{{ url_for('main.edit_temperature', session_id=session.id, temp_id=temp.id) }}" class="edit-temp-form">
+                                        {% for field, label in [('meat_temp', 'Meat Temp'), ('smoker_temp', 'Smoker Temp'), ('note', 'Note')] %}
+                                            <div class="form-group">
+                                                <label>{{ label }}:</label>
+                                                <input type="{% if 'temp' in field %}number{% else %}text{% endif %}" 
+                                                       name="{{ field }}" 
+                                                       value="{{ temp[field] }}" 
+                                                       {% if 'temp' in field %}step="0.1"{% endif %}>
+                                            </div>
+                                        {% endfor %}
+                                        <div class="form-actions">
+                                            <button type="submit" class="btn-small">Save</button>
+                                            <button type="button" class="btn-small" onclick="SessionUI.toggleEdit('temp', '{{ temp.id }}')">Cancel</button>
+                                        </div>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('main.delete_temperature', session_id=session.id, temp_id=temp.id) }}" class="inline-form" style="margin-top: 5px;" onsubmit="return confirm('Are you sure you want to delete this?');">
+                                        <button type="submit" class="btn-small btn-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No temperature readings logged yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Temperature Graph -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Temperature Log Graph</h5>
             {% if session.log_entries | length > 0 %}
-            <button class="btn btn-light btn-sm" onclick="refreshGraph()">
-                <i class="fas fa-sync-alt"></i> Refresh Graph
-            </button>
+                <button class="btn btn-light btn-sm" onclick="SessionUI.refreshGraph()">
+                    <i class="fas fa-sync-alt"></i> Refresh Graph
+                </button>
             {% endif %}
         </div>
         <div class="card-body">
             {% if session.log_entries | length > 0 %}
-            <div class="text-center">
-                <img id="temp-log-graph" src="{{ url_for('main.view_temp_log_graph', session_id=session.id) }}" 
-                     class="img-fluid" alt="Temperature Log Graph"
-                     style="max-width: 100%; height: auto;">
-            </div>
-            <script>
-                function refreshGraph() {
-                    const graphImg = document.getElementById('temp-log-graph');
-                    if (graphImg) {
-                        const timestamp = new Date().getTime();
-                        graphImg.src = '{{ url_for('main.view_temp_log_graph', session_id=session.id) }}' + '?t=' + timestamp;
-                    }
-                }
-                
-                {% if not session.end_time %}
-                // Auto-refresh graph every 5 minutes for active sessions
-                setInterval(refreshGraph, 120000);
-                {% endif %}
-            </script>
+                <div class="text-center">
+                    <img id="temp-log-graph" 
+                         src="{{ url_for('main.view_temp_log_graph', session_id=session.id) }}" 
+                         class="img-fluid" 
+                         alt="Temperature Log Graph"
+                         style="max-width: 100%; height: auto;">
+                </div>
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> No temperature log data available for this session.
-            </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No temperature log data available for this session.
+                </div>
             {% endif %}
         </div>
     </div>
- 
+
+    <!-- Session Controls/Info -->
     {% if not session.end_time %}
-    <!-- Session Control for active sessions -->
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Session Control</h5>
+        <!-- Active Session Controls -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Session Control</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.complete_session', session_id=session.id) }}">
+                    <button type="submit" class="btn btn-success" 
+                            onclick="return confirm('Are you sure you want to complete this session? This will finalize the cook and mark the end time.')">
+                        <i class="fas fa-check-circle"></i> Complete Session
+                    </button>
+                    <small class="form-text text-muted">
+                        Completing the session will set the end time and finalize this cook.
+                    </small>          
+                </form>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('main.complete_session', session_id=session.id) }}">
-                <button type="submit" class="btn btn-success" 
-                        onclick="return confirm('Are you sure you want to complete this session? This will finalize the cook and mark the end time.')">
-                    <i class="fas fa-check-circle"></i> Complete Session
-                </button>
-                <small class="form-text text-muted">
-                    Completing the session will set the end time and finalize this cook.
-                </small>          
-        </div>
-    </div>
-      </div>
     {% else %}
-    <!-- Session Info and CSV upload for completed sessions -->
-    <div class="card mb-4">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0">Session Info</h5>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle"></i> Session completed on {{ format_datetime(session.end_time, '%A, %B %d, %Y at %I:%M %p') }}
+        <!-- Completed Session Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Session Complete</h5>
             </div>
-            <p class="mb-0">Total duration: {{ session.duration() }}</p>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Session completed on {{ format_datetime(session.end_time, '%A, %B %d, %Y at %I:%M %p') }}
+                </div>
+                <p class="mb-0">Total duration: {{ session.duration() }}</p>
+            </div>
         </div>
-    </div>
-    
-    <!-- CSV Upload section only for completed sessions -->
-    <div class="graph-section">
-        <h3>External Temperature Data</h3>
         
-        <form method="POST" action="{{ url_for('main.upload_csv', session_id=session.id) }}" enctype="multipart/form-data" class="upload-form">
-            <div class="form-group">
-                <label for="csv_file">Upload CSV data:</label>
-                <input type="file" id="csv_file" name="csv_file" accept=".csv">
+        <!-- CSV Upload Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>External Temperature Data</h5>
             </div>
-            <button type="submit" class="btn">Generate Graph</button>         
-        </form>        
-        {% if session.graphs %}
-            <div class="graph-list">
-                {% for graph in session.graphs %}
-                    <div class="graph-container">
-                        <h4>{{ graph.filename }}</h4>
-                        <p>Uploaded on {{ format_datetime(graph.created_at, '%Y-%m-%d %I:%M %p') }}</p>
-                        <img src="{{ url_for('main.view_graph', graph_id=graph.id) }}" alt="Temperature Graph" class="temp-graph">
-                        
-                        <form method="POST" action="{{ url_for('main.delete_graph', session_id=session.id, graph_id=graph.id) }}" class="inline-form" onsubmit="return confirm('Delete this graph?');">
-                            <button type="submit" class="btn-small btn-danger">Delete Graph</button>
-                        </form>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.upload_csv', session_id=session.id) }}" enctype="multipart/form-data" class="upload-form">
+                    <div class="form-group">
+                        <label for="csv_file">Upload CSV data:</label>
+                        <input type="file" id="csv_file" name="csv_file" accept=".csv">
                     </div>
-                {% endfor %}
+                    <button type="submit" class="btn">Generate Graph</button>         
+                </form>        
+                
+                {% if session.graphs %}
+                    <div class="graph-list mt-3">
+                        {% for graph in session.graphs %}
+                            <div class="graph-container mb-3">
+                                <h6>{{ graph.filename }}</h6>
+                                <p class="text-muted small">Uploaded on {{ format_datetime(graph.created_at, '%Y-%m-%d %I:%M %p') }}</p>
+                                <img src="{{ url_for('main.view_graph', graph_id=graph.id) }}" alt="Temperature Graph" class="img-fluid temp-graph">
+                                <form method="POST" action="{{ url_for('main.delete_graph', session_id=session.id, graph_id=graph.id) }}" class="inline-form mt-2" onsubmit="return confirm('Delete this graph?');">
+                                    <button type="submit" class="btn-small btn-danger">Delete Graph</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No external data graphs uploaded yet.</p>
+                {% endif %}
             </div>
-        {% else %}
-            <p>No external data graphs uploaded yet. Upload a CSV file to generate a graph.</p>
-        {% endif %}
+        </div>
+
+        <!-- Export Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Export Session Data</h5>
             </div>
-       <div class="card mt-3">
-        <div class="card-header">
-            <h5>Export Session Data</h5>
+            <div class="card-body">
+                <p>Export this BBQ session data as a CSV file:</p>
+                <a href="{{ url_for('main.export_session_csv', session_id=session.id) }}" class="btn">
+                    <i class="fas fa-file-csv"></i> Export as CSV
+                </a>
+                <small class="text-muted d-block mt-2">
+                    Exports include session details, temperature readings, automatic logs, and notes.
+                </small>
+            </div>
         </div>
-        <div class="card-body">
-            <p>Export this BBQ session data as a CSV file:</p>
-            <a href="{{ url_for('main.export_session_csv', session_id=session.id) }}"
-               class="btn">
-                <i class="fas fa-file-csv"></i> Export as CSV
-            </a>
-            <small class="text-muted d-block mt-2">
-                Exports include session details, temperature readings, automatic logs, and notes.
-            </small>
-        </div>
-    </div>
-    </div>
     {% endif %}
 </section>
-<!-- Add this to your session.html template -->
-<!-- This should go in the section where you display graphs -->
 
-<!-- Temperature Graph Section -->
-<div class="graph-section">
-    <h3>Temperature Graph</h3>
-    
-    <!-- Button to generate/refresh the graph -->
-    <div class="mb-3">
-        <a href="{{ url_for('main.view_temp_log_graph', session_id=session.id) }}" 
-           class="btn btn-primary" 
-           target="_blank">
-            Generate Temperature Graph
-        </a>
-    </div>
-    
-    <!-- Display the graph inline -->
-    <div class="graph-container">
-        <img src="{{ url_for('main.view_temp_log_graph', session_id=session.id) }}" 
-             alt="Temperature Graph" 
-             class="img-fluid"
-             style="max-width: 100%; height: auto;"
-             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzY2NzMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5FcnJvciBsb2FkaW5nIGdyYXBoPC90ZXh0Pjwvc3ZnPg==';">
-    </div>
-</div>
-
-<!-- Alternative: Auto-refresh the graph every few minutes if session is active -->
-{% if not session.end_time %}
+<!-- Centralized JavaScript -->
 <script>
-    // Auto-refresh the graph every 5 minutes for active sessions
-    setInterval(function() {
-        const graphImg = document.querySelector('.graph-container img');
-        if (graphImg) {
-            // Add timestamp to force refresh
-            const originalSrc = graphImg.src.split('?')[0];
-            graphImg.src = originalSrc + '?t=' + new Date().getTime();
+const SessionUI = {
+    // Unified toggle function for editing
+    toggleEdit: function(type, id) {
+        const rowElement = document.getElementById(`${type}-row-${id}`);
+        const editElement = document.getElementById(`${type}-edit-${id}`);
+        
+        if (editElement.style.display === 'none') {
+            rowElement.style.display = 'none';
+            editElement.style.display = 'table-row';
+        } else {
+            editElement.style.display = 'none';
+            rowElement.style.display = 'table-row';
         }
-    }, 300000); // 5 minutes
-</script>
-{% endif %}
-{% endblock %}
+    },
 
+    // Graph refresh functionality
+    refreshGraph: function() {
+        const graphImg = document.getElementById('temp-log-graph');
+        if (graphImg) {
+            const timestamp = new Date().getTime();
+            graphImg.src = '{{ url_for('main.view_temp_log_graph', session_id=session.id) }}' + '?t=' + timestamp;
+        }
+    },
+
+    // Auto-refresh setup
+    init: function() {
+        {% if not session.end_time %}
+        // Auto-refresh graph every 2 minutes for active sessions
+        setInterval(this.refreshGraph, 120000);
+        {% endif %}
+    }
+};
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    SessionUI.init();
+});
+</script>
+{% endblock %}
