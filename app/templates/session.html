@@ -334,4 +334,45 @@
     </div>
     {% endif %}
 </section>
+<!-- Add this to your session.html template -->
+<!-- This should go in the section where you display graphs -->
+
+<!-- Temperature Graph Section -->
+<div class="graph-section">
+    <h3>Temperature Graph</h3>
+    
+    <!-- Button to generate/refresh the graph -->
+    <div class="mb-3">
+        <a href="{{ url_for('main.view_temp_log_graph', session_id=session.id) }}" 
+           class="btn btn-primary" 
+           target="_blank">
+            Generate Temperature Graph
+        </a>
+    </div>
+    
+    <!-- Display the graph inline -->
+    <div class="graph-container">
+        <img src="{{ url_for('main.view_temp_log_graph', session_id=session.id) }}" 
+             alt="Temperature Graph" 
+             class="img-fluid"
+             style="max-width: 100%; height: auto;"
+             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzY2NzMiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5FcnJvciBsb2FkaW5nIGdyYXBoPC90ZXh0Pjwvc3ZnPg==';">
+    </div>
+</div>
+
+<!-- Alternative: Auto-refresh the graph every few minutes if session is active -->
+{% if not session.end_time %}
+<script>
+    // Auto-refresh the graph every 5 minutes for active sessions
+    setInterval(function() {
+        const graphImg = document.querySelector('.graph-container img');
+        if (graphImg) {
+            // Add timestamp to force refresh
+            const originalSrc = graphImg.src.split('?')[0];
+            graphImg.src = originalSrc + '?t=' + new Date().getTime();
+        }
+    }, 300000); // 5 minutes
+</script>
+{% endif %}
 {% endblock %}
+
