@@ -515,6 +515,12 @@ def view_temp_log_graph(session_id):
         .all()
     )
 
+    # ADD THESE DEBUG LINES:
+    print(f"DEBUG: Session {session_id}")
+    print(f"  Automatic logs: {len(temp_logs)}")
+    print(f"  Manual temps: {len(manual_temps)}")
+    print(f"  Will use: {'automatic' if temp_logs else 'manual' if manual_temps else 'no data'}")
+
     # Use the existing timezone function
     user_timezone = get_timezone()
 
@@ -524,15 +530,19 @@ def view_temp_log_graph(session_id):
     try:
         if temp_logs:
             # Use automatic temperature logs
+            print("DEBUG: Using automatic temperature logs")
             image_data = generate_graph_from_db(temp_logs, timezone=user_timezone)
         elif manual_temps:
             # Use manual temperature entries
+            print("DEBUG: Using manual temperature entries")
             image_data = generate_graph_from_manual_temps(manual_temps, timezone=user_timezone)
         else:
             # No data available
+            print("DEBUG: No data available, using no_data_graph")
             from app.graph_utils import generate_no_data_graph
             image_data = generate_no_data_graph()
 
+        print("DEBUG: Graph generation successful")
         # Return the image
         return send_file(
             io.BytesIO(image_data),
@@ -541,6 +551,9 @@ def view_temp_log_graph(session_id):
             download_name=f"temp_log_graph_{session_id}.png",
         )
     except Exception as e:
+        print(f"DEBUG: Exception in graph generation: {str(e)}")
+        import traceback
+        traceback.print_exc()  # This will show the full error
         flash(f"Error generating graph: {str(e)}", "error")
         return redirect(url_for("main.view_session", session_id=session_id))
 
