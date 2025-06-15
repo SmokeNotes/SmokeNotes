@@ -267,10 +267,11 @@ def generate_graph_from_manual_temps(
     import io
     from zoneinfo import ZoneInfo
     from datetime import datetime
-    import logging
     
-    logger = logging.getLogger(__name__)
-    logger.debug(f"generate_graph_from_manual_temps called with {len(manual_temps)} entries")
+    # Use print statements instead of logging for debugging in Docker
+    print(f"=== MANUAL TEMP GRAPH DEBUG ===")
+    print(f"Called with {len(manual_temps)} manual temperature entries")
+    print(f"Timezone: {timezone}")
 
     # Convert manual temperature entries to pandas DataFrame
     data = []
@@ -282,34 +283,53 @@ def generate_graph_from_manual_temps(
             "note": temp.note or "",
         }
         data.append(entry)
-        logger.debug(f"Entry {i}: {entry}")
+        print(f"Entry {i+1}: timestamp={entry['timestamp']}, meat={entry['meat_temp']}, smoker={entry['smoker_temp']}")
 
     # Create DataFrame
     df = pd.DataFrame(data)
-    logger.debug(f"DataFrame created with shape: {df.shape}")
-    logger.debug(f"DataFrame columns: {df.columns.tolist()}")
+    print(f"DataFrame created with shape: {df.shape}")
+    print(f"DataFrame columns: {df.columns.tolist()}")
 
     # Skip if no data
     if df.empty:
-        logger.warning("DataFrame is empty, generating no-data graph")
+        print("ERROR: DataFrame is empty, generating no-data graph")
         return generate_no_data_graph()
 
     # Debug: Check the data types and values
-    logger.debug(f"Timestamp dtype: {df['timestamp'].dtype}")
-    logger.debug(f"First timestamp: {df['timestamp'].iloc[0]}")
-    logger.debug(f"Meat temp values: {df['meat_temp'].dropna().tolist()}")
-    logger.debug(f"Smoker temp values: {df['smoker_temp'].dropna().tolist()}")
+    print(f"Timestamp dtype: {df['timestamp'].dtype}")
+    print(f"First timestamp: {df['timestamp'].iloc[0]}")
+    print(f"Last timestamp: {df['timestamp'].iloc[-1]}")
+    
+    # Check for valid temperature data
+    meat_temp_count = df['meat_temp'].notna().sum()
+    smoker_temp_count = df['smoker_temp'].notna().sum()
+    print(f"Valid meat_temp entries: {meat_temp_count}")
+    print(f"Valid smoker_temp entries: {smoker_temp_count}")
+    
+    if meat_temp_count > 0:
+        print(f"Meat temp range: {df['meat_temp'].min()} to {df['meat_temp'].max()}")
+    if smoker_temp_count > 0:
+        print(f"Smoker temp range: {df['smoker_temp'].min()} to {df['smoker_temp'].max()}")
 
     # Make sure timestamp is timezone aware - assume UTC if naive
-    if not df.empty and df["timestamp"].iloc[0].tzinfo is None:
-        logger.debug("Timestamps are naive, assuming UTC")
-        df["timestamp"] = df["timestamp"].apply(lambda dt: dt.replace(tzinfo=ZoneInfo("UTC")))
-
-    # Convert to user's timezone
     if not df.empty:
-        user_tz = ZoneInfo(timezone)
-        logger.debug(f"Converting timestamps to {timezone}")
-        df["timestamp"] = df["timestamp"].apply(lambda dt: dt.astimezone(user_tz))
+        first_timestamp = df["timestamp"].iloc[0]
+        if first_timestamp.tzinfo is None:
+            print("Timestamps are naive, assuming UTC")
+            df["timestamp"] = df["timestamp"].apply(lambda dt: dt.replace(tzinfo=ZoneInfo("UTC")))
+        else:
+            print(f"Timestamps are timezone aware: {first_timestamp.tzinfo}")
+
+        # Convert to user's timezone
+        try:
+            user_tz = ZoneInfo(timezone)
+            print(f"Converting timestamps to {timezone}")
+            df["timestamp"] = df["timestamp"].apply(lambda dt: dt.astimezone(user_tz))
+            print(f"Converted first timestamp: {df['timestamp'].iloc[0]}")
+        except Exception as e:
+            print(f"ERROR converting timezone: {e}")
+            # Fall back to UTC if timezone conversion fails
+            timezone = "UTC"
 
     # Calculate total elapsed time if we have data
     if len(df) > 1:
@@ -317,100 +337,151 @@ def generate_graph_from_manual_temps(
         total_hours, remainder = divmod(elapsed.total_seconds(), 3600)
         total_minutes = remainder // 60
         elapsed_str = f"{int(total_hours)}h {int(total_minutes)}m"
-        logger.debug(f"Cook time: {elapsed_str}")
+        print(f"Cook time: {elapsed_str}")
     else:
         elapsed_str = "0h 0m"
-        logger.debug("Only one data point, cook time is 0")
+        print("Only one data point, cook time is 0")
 
     # Extract the date for title
-    graph_date = (
-        df["timestamp"].dt.date.iloc[0] if not df.empty else datetime.now().date()
-    )
-    logger.debug(f"Graph date: {graph_date}")
+    try:
+        graph_date = df["timestamp"].dt.date.iloc[0] if not df.empty else datetime.now().date()
+        print(f"Graph date: {graph_date}")
+    except Exception as e:
+        print(f"ERROR getting graph date: {e}")
+        graph_date = datetime.now().date()
 
     # Plotting
-    fig, ax = plt.subplots(figsize=(16, 9))
-    logger.debug("Created matplotlib figure")
-
-    # Color mapping for manual entries
-    colors = {
-        "meat_temp": "orange",
-        "smoker_temp": "red",
-    }
-
-    # Plot temperature lines
-    plotted_any = False
-    for col in ["meat_temp", "smoker_temp"]:
-        if col in df.columns:
-            # Filter out None/NaN values for plotting
-            plot_data = df[df[col].notna()]
-            if not plot_data.empty:
-                color = colors.get(col, "gray")
-                logger.debug(f"Plotting {col} with {len(plot_data)} points")
-                # Use markers for manual entries since they're typically less frequent
-                ax.plot(
-                    plot_data["timestamp"],
-                    plot_data[col],
-                    label=f"{col.replace('_', ' ').title()} (°F)",
-                    color=color,
-                    marker='o',
-                    markersize=4,
-                    linewidth=2,
-                )
-                plotted_any = True
-            else:
-                logger.debug(f"No valid data for {col}")
-
-    # If we didn't plot anything, show a message
-    if not plotted_any:
-        logger.warning("No valid temperature data to plot")
-        ax.text(
-            0.5, 0.5, "No valid temperature data to display",
-            horizontalalignment="center", verticalalignment="center",
-            transform=ax.transAxes, fontsize=16
-        )
-
-    # Titles and labels
-    ax.set_title(
-        f"Manual Temperature Readings for {graph_date}  (Cook time: {elapsed_str})", 
-        fontsize=20
-    )
-    ax.set_xlabel("Local Time", fontsize=16)
-    ax.set_ylabel("Temperature (°F)", fontsize=16)
-
-    # Format x-axis to show only time
     try:
+        print("Creating matplotlib figure...")
+        fig, ax = plt.subplots(figsize=(16, 9))
+        print("Figure created successfully")
+
+        # Color mapping for manual entries
+        colors = {
+            "meat_temp": "orange",
+            "smoker_temp": "red",
+        }
+
+        # Plot temperature lines
+        plotted_any = False
+        for col in ["meat_temp", "smoker_temp"]:
+            if col in df.columns:
+                # Filter out None/NaN values for plotting
+                plot_data = df[df[col].notna()]
+                print(f"Processing {col}: {len(plot_data)} valid points out of {len(df)} total")
+                
+                if not plot_data.empty:
+                    color = colors.get(col, "gray")
+                    print(f"Plotting {col} with color {color}")
+                    
+                    # Use markers for manual entries since they're typically less frequent
+                    ax.plot(
+                        plot_data["timestamp"],
+                        plot_data[col],
+                        label=f"{col.replace('_', ' ').title()} (°F)",
+                        color=color,
+                        marker='o',
+                        markersize=6,
+                        linewidth=2,
+                        linestyle='-',
+                    )
+                    plotted_any = True
+                    print(f"Successfully plotted {col}")
+                else:
+                    print(f"No valid data for {col}")
+
+        # If we didn't plot anything, show a message
+        if not plotted_any:
+            print("WARNING: No valid temperature data to plot")
+            ax.text(
+                0.5, 0.5, "No valid temperature data to display",
+                horizontalalignment="center", verticalalignment="center",
+                transform=ax.transAxes, fontsize=16
+            )
+        else:
+            print(f"Successfully plotted data for graph")
+
+        # Titles and labels
+        ax.set_title(
+            f"Manual Temperature Readings for {graph_date}  (Cook time: {elapsed_str})", 
+            fontsize=20
+        )
+        ax.set_xlabel("Local Time", fontsize=16)
+        ax.set_ylabel("Temperature (°F)", fontsize=16)
+
+        # Format x-axis to show only time
         if plotted_any:
-            # Use user's timezone for formatting
-            user_tz = ZoneInfo(timezone)
-            local_formatter = mdates.DateFormatter("%H:%M:%S", tz=user_tz)
-            ax.xaxis.set_major_formatter(local_formatter)
+            try:
+                print("Formatting x-axis...")
+                # Use user's timezone for formatting
+                user_tz = ZoneInfo(timezone)
+                local_formatter = mdates.DateFormatter("%H:%M", tz=user_tz)
+                ax.xaxis.set_major_formatter(local_formatter)
 
-            # Set ticks every N minutes
-            locator = mdates.MinuteLocator(interval=tick_interval_minutes)
-            ax.xaxis.set_major_locator(locator)
-            
-            # Set y-axis to 25°F increments
-            ax.yaxis.set_major_locator(ticker.MultipleLocator(25))
+                # Set ticks - be more conservative with manual data
+                # Use fewer ticks since manual entries are typically sparse
+                if len(df) <= 10:
+                    # For few data points, show all timestamps
+                    ax.set_xticks(df["timestamp"])
+                else:
+                    # For more data points, use time-based intervals
+                    locator = mdates.MinuteLocator(interval=max(15, tick_interval_minutes))
+                    ax.xaxis.set_major_locator(locator)
+                
+                # Set y-axis to 25°F increments, but make sure we have a reasonable range
+                y_min, y_max = ax.get_ylim()
+                if y_max - y_min < 50:  # If range is too small, expand it
+                    y_center = (y_min + y_max) / 2
+                    ax.set_ylim(y_center - 50, y_center + 50)
+                
+                ax.yaxis.set_major_locator(ticker.MultipleLocator(25))
+                print("X-axis formatting completed")
+                
+            except Exception as e:
+                print(f"ERROR formatting x-axis: {e}")
+                # Continue without custom formatting
+
+        # Grid, Legend, and Layout
+        ax.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+        if plotted_any:
+            ax.legend(fontsize=14, loc='upper left')
+        
+        # Rotate x-axis labels for better readability
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        plt.tight_layout()
+
+        # Save to bytes buffer instead of file
+        print("Saving graph to buffer...")
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", dpi=150, bbox_inches='tight')
+        buf.seek(0)
+        image_data = buf.read()
+        plt.close(fig)
+        
+        print(f"Graph saved successfully. Image size: {len(image_data)} bytes")
+        return image_data
+        
     except Exception as e:
-        # Fallback if there's an issue with time formatting
-        logger.error(f"Error formatting timestamps: {e}")
-
-    # Grid, Legend, and Layout
-    ax.grid(True, which="both", linestyle="--", linewidth=0.5)
-    if plotted_any:
-        ax.legend(fontsize=14)
-    fig.autofmt_xdate()
-    plt.tight_layout()
-
-    # Save to bytes buffer instead of file
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png", dpi=150)
-    buf.seek(0)
-    plt.close(fig)
-    
-    logger.debug("Graph saved to buffer successfully")
-    return buf.read()
+        print(f"ERROR in graph generation: {str(e)}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
+        
+        # Return a basic error graph
+        try:
+            fig, ax = plt.subplots(figsize=(16, 9))
+            ax.text(0.5, 0.5, f"Error generating graph:\n{str(e)}", 
+                   horizontalalignment="center", verticalalignment="center",
+                   transform=ax.transAxes, fontsize=16)
+            ax.set_title("Graph Generation Error", fontsize=20)
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png", dpi=150)
+            buf.seek(0)
+            plt.close(fig)
+            return buf.read()
+        except:
+            # If even error graph fails, return no-data graph
+            return generate_no_data_graph()
 
 
 def generate_no_data_graph():
@@ -418,6 +489,7 @@ def generate_no_data_graph():
     import matplotlib.pyplot as plt
     import io
     
+    print("Generating no-data graph")
     fig, ax = plt.subplots(figsize=(16, 9))
     ax.text(
         0.5,
